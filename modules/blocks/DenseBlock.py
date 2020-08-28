@@ -1,4 +1,5 @@
 from torch import cat, Tensor
+import torch.nn as nn
 
 
 class _DenseLayer(nn.Module):
@@ -14,12 +15,12 @@ class _DenseLayer(nn.Module):
 
         self.bottleneck_conv = nn.Conv2d(in_channels=num_features, out_channels=bottleneck_size * growth_rate,
                                          kernel_size=1, stride=1, bias=False)
-        self.bottleneck_activ = nn.ReLU(inplace=True)
+        self.bottleneck_activ = nn.ReLU(inplace=False)
         self.bottleneck_norm = nn.InstanceNorm2d(num_features=3, affine=True)
 
         self.dense_conv = nn.Conv2d(in_channels=bottleneck_size * growth_rate, out_channels=growth_rate,
                                     kernel_size=3, stride=1, bias=False, padding=1, padding_mode='reflect')
-        self.dense_activ = nn.Relu(inplace=True)
+        self.dense_activ = nn.ReLU(inplace=False)
         self.dense_norm = nn.InstanceNorm2d(num_features=3, affine=True)
 
     def forward(self, input: Tensor) -> Tensor:
@@ -30,7 +31,7 @@ class _DenseLayer(nn.Module):
         """
 
         if input.shape[0] != self.num_features:
-            raise ValueError("Incorrect dimensions")
+            raise ValueError('Incorrect dimensions')
 
         bottleneck_features = self.bottleneck_norm(
             self.bottleneck_activ(

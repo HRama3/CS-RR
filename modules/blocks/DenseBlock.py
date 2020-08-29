@@ -1,5 +1,6 @@
 from torch import cat, Tensor
 import torch.nn as nn
+from torch.nn import Module
 
 
 class _DenseLayer(nn.Module):
@@ -16,12 +17,12 @@ class _DenseLayer(nn.Module):
         self.bottleneck_conv = nn.Conv2d(in_channels=num_features, out_channels=bottleneck_size * growth_rate,
                                          kernel_size=1, stride=1, bias=False)
         self.bottleneck_activ = nn.ReLU(inplace=False)
-        self.bottleneck_norm = nn.InstanceNorm2d(num_features=3, affine=True)
+        self.bottleneck_norm = nn.InstanceNorm2d(num_features=bottleneck_size * growth_rate, affine=True)
 
         self.dense_conv = nn.Conv2d(in_channels=bottleneck_size * growth_rate, out_channels=growth_rate,
                                     kernel_size=3, stride=1, bias=False, padding=1, padding_mode='reflect')
         self.dense_activ = nn.ReLU(inplace=False)
-        self.dense_norm = nn.InstanceNorm2d(num_features=3, affine=True)
+        self.dense_norm = nn.InstanceNorm2d(num_features=growth_rate, affine=True)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -30,7 +31,7 @@ class _DenseLayer(nn.Module):
         :return: Tensor
         """
 
-        if input.shape[0] != self.num_features:
+        if input.shape[1] != self.num_features:
             raise ValueError('Incorrect dimensions')
 
         bottleneck_features = self.bottleneck_norm(
@@ -57,13 +58,13 @@ class DenseBlock(nn.ModuleList):
         :param num_features: int
         :param bottleneck_size: int
         """
-        dense_layers = [_DenseLayer(growth_rate, num_features, bottleneck_size)]
+        self.dense_layers = [_DenseLayer(growth_rate, num_features, bottleneck_size)]
 
         for i in range(1, num_layers):
             num_features += growth_rate
-            dense_layers.append(_DenseLayer(growth_rate, num_features, bottleneck_size))
+            self.dense_layers.append(_DenseLayer(growth_rate, num_features, bottleneck_size))
 
-        super(DenseBlock, self).__init__(dense_layers)
+        super(DenseBlock, self).__init__(self.dense_layers)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -71,8 +72,13 @@ class DenseBlock(nn.ModuleList):
         :param input: Tensor
         :return: Tensor
         """
-        for layer in self:
-            dense_features = layer(input)
+
+        output = self.dense_layers[0].forward(input)
+        input = cat((input, output), dim=1)
+
+        for layer in self.dense_layers[1:]:
+            dense_features = layer.forward(input)
+            output = cat((output, dense_features), dim=1)
             input = cat((input, dense_features), dim=1)
 
-        return input
+        return output

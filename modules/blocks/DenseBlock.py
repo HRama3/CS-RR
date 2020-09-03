@@ -12,6 +12,7 @@ class _DenseLayer(nn.Module):
         :param bottleneck_size: int
         """
         super(_DenseLayer, self).__init__()
+
         self.num_features = num_features
 
         self.bottleneck_conv = nn.Conv2d(in_channels=num_features, out_channels=bottleneck_size * growth_rate,

@@ -1,4 +1,6 @@
-from torch import cat, nn, Tensor
+import torch
+import torch.nn as nn
+from torch import Tensor
 
 
 class _DenseLayer(nn.Module):
@@ -72,11 +74,11 @@ class DenseBlock(nn.ModuleList):
         """
 
         output = self.dense_layers[0].forward(input)
-        input = cat((input, output), dim=1)
+        input = torch.cat((input, output), dim=1)
 
         for layer in self.dense_layers[1:]:
             dense_features = layer.forward(input)
-            output = cat((output, dense_features), dim=1)
-            input = cat((input, dense_features), dim=1)
+            output = torch.cat((output, dense_features), dim=1)
+            input = torch.cat((input, dense_features), dim=1)
 
         return output

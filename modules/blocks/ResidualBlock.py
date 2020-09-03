@@ -1,5 +1,7 @@
 from .DenseBlock import DenseBlock
-from torch import nn, Tensor
+import torch
+import torch.nn as nn
+from torch import Tensor
 
 
 class ResidualBLock(nn.Module):
@@ -15,7 +17,8 @@ class ResidualBLock(nn.Module):
         if num_features % num_dense_layers:
             raise ValueError('Non-Integral Dense Layer Growth Rate')
 
-        self.dense_layers = DenseBlock(num_dense_layers, num_features//num_dense_layers, num_features, bottleneck_size)
+        self.dense_layers = DenseBlock(num_dense_layers, num_features // num_dense_layers, num_features,
+                                       bottleneck_size)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -24,6 +27,6 @@ class ResidualBLock(nn.Module):
         :return: Tensor
         """
         dense_features = self.dense_layers.forward(input)
-        output = input + dense_features
+        output = torch.add(input, dense_features)
 
         return output

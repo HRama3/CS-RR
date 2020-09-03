@@ -1,3 +1,1 @@
-import torch.nn as nn
-
-__all__ = ['DenseBlock']
+__all__ = ['DenseBlock', 'ResidualBlock']

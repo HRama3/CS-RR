@@ -1,6 +1,5 @@
 from .DenseBlock import DenseBlock
-import torch.nn as nn
-from torch import Tensor
+from torch import nn, Tensor
 
 
 class ResidualBLock(nn.Module):

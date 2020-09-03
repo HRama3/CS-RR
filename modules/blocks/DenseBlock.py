@@ -1,6 +1,4 @@
-from torch import cat, Tensor
-import torch.nn as nn
-from torch.nn import Module
+from torch import cat, nn, Tensor
 
 
 class _DenseLayer(nn.Module):

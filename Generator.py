@@ -11,6 +11,14 @@ class Generator(nn.Module):
 
     def __init__(self, num_features: int, num_res_blocks: int, num_dense_layers: int, dense_bottleneck_size: int,
                  instance_norm: bool = True):
+        """
+
+        :param num_features: int
+        :param num_res_blocks: int
+        :param num_dense_layers: int
+        :param dense_bottleneck_size: int
+        :param instance_norm: bool
+        """
         super(Generator, self).__init__()
 
         if num_features % 2:
@@ -28,7 +36,8 @@ class Generator(nn.Module):
                       else nn.BatchNorm2d(num_features // 2, affine=True))
         self.activ1 = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(in_channels=num_features // 2, out_channels=num_features, bias=False,
-                               kernel_size=Generator.kernel_size, padding=Generator.kernel_size // 2, padding_mode='reflect')
+                               kernel_size=Generator.kernel_size,
+                               padding=Generator.kernel_size // 2, padding_mode='reflect')
         self.norm2 = (nn.InstanceNorm2d(num_features, affine=True) if instance_norm
                       else nn.BatchNorm2d(num_features, affine=True))
         self.activ2 = nn.ReLU(inplace=True)
@@ -45,6 +54,11 @@ class Generator(nn.Module):
         self.out_activ = nn.Sigmoid()
 
     def forward(self, input: Tensor) -> Tensor:
+        """
+
+        :param input: Tensor
+        :return: Tensor
+        """
         input1 = self.activ1(
             self.norm1(
                 self.conv1(input)
@@ -58,9 +72,9 @@ class Generator(nn.Module):
         )
 
         residual = self.res_blocks(input2)
-        elwise_sum = torch.add(input2, residual)
+        global_sum = torch.add(input2, residual)
 
-        upscale1 = self.subpixel_conv1(elwise_sum)
+        upscale1 = self.subpixel_conv1(global_sum)
         upscale2 = self.subpixel_conv2(upscale1)
 
         output: Tensor = self.out_activ(

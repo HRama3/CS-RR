@@ -1,8 +1,6 @@
 import torch
-from torch import Tensor
-import torch.nn as nn
+from torch import nn, Tensor
 import torch.nn.functional as F
-import torch.nn.init as init
 
 
 class SubPixelConv(nn.Module):

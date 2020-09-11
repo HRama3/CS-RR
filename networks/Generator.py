@@ -1,7 +1,7 @@
 from modules.blocks.ResidualBlock import ResidualBlock
 from modules.layers.SubPixelConv import SubPixelConv
 import torch
-import torch.nn as nn
+from torch import nn
 from torch import Tensor
 
 

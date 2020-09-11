@@ -76,6 +76,8 @@ class PerceptualLoss(nn.Module):
                              .format(str(input.shape), str(target.shape)))
 
         for i in range(input.shape[0]):
+            input[i, :, :, :] -= torch.min(input.select(dim=0, index=i), dim=(1, 2), keepdim=True)
+
             self.norm(input.select(dim=0, index=i))
             self.norm(target.select(dim=0, index=i))
 
@@ -85,9 +87,11 @@ class PerceptualLoss(nn.Module):
         content_loss = torch.sum(torch.square(input_content - target_content), dim=(1, 2, 3))
         content_loss.div_(input.shape[1] * input.shape[2] * input.shape[3])
 
-        input_style = torch.reshape(self.style_layers(input_content), shape=(input.shape[0], input.shape[1], -1))
+        input_style = self.style_layers(input_content)
+        input_style = torch.reshape(input_style, (input_style.shape[0], input_style.shape[1], -1))
         input_style_t = torch.transpose(input_style, dim0=1, dim1=2)
-        target_style = torch.reshape(self.style_layers(target_content), shape=(target.shape[0], target.shape[1], -1))
+        target_style = self.style_layers(target_content)
+        target_style = torch.reshape(target_style, (target_style.shape[0], target_style.shape[1], -1))
         target_style_t = torch.transpose(target_style, dim0=1, dim1=2)
 
         gram_input = torch.matmul(input_style, input_style_t)

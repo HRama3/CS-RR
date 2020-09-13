@@ -76,8 +76,6 @@ class PerceptualLoss(nn.Module):
                              .format(str(input.shape), str(target.shape)))
 
         for i in range(input.shape[0]):
-            input[i, :, :, :] -= torch.min(input.select(dim=0, index=i), dim=(1, 2), keepdim=True)
-
             self.norm(input.select(dim=0, index=i))
             self.norm(target.select(dim=0, index=i))
 

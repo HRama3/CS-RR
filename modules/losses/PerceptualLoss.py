@@ -11,7 +11,7 @@ class _VGG(nn.Module):
     vgg_url = vgg.model_urls['vgg16']
     cfg = 'D'
 
-    def __init__(self):
+    def __init__(self) -> None:
         super(_VGG, self).__init__()
         self.features = vgg.make_layers(vgg.cfgs[_VGG.cfg], batch_norm=False)
 
@@ -37,7 +37,7 @@ class PerceptualLoss(nn.Module):
     layers = {'relu1_1': 2, 'relu1_2': 4, 'relu2_1': 7, 'relu2_2': 9, 'relu3_1': 12,
               'relu3_2': 14, 'relu3_3': 16, 'relu4_1': 19, 'relu4_2': 21, 'relu4_3': 23}
 
-    def __init__(self, content_weight=0.75, content_layer='relu1_2', style_layer='relu3_3'):
+    def __init__(self, content_weight=0.75, content_layer='relu1_2', style_layer='relu3_3') -> None:
         """
 
         :param content_weight: float
@@ -70,14 +70,24 @@ class PerceptualLoss(nn.Module):
 
         :param input: Tensor
         :param target: Tensor
+        :return: Tensor
         """
         if input.shape != target.shape:
             raise ValueError('Input dimensions {:s} are different from target dimensions {:s}'
                              .format(str(input.shape), str(target.shape)))
 
         for i in range(input.shape[0]):
-            self.norm(input.select(dim=0, index=i))
-            self.norm(target.select(dim=0, index=i))
+            input_view = input.select(dim=0, index=i).view(input.shape[1], -1)
+            target_view = target.select(dim=0, index=i)
+
+            input_min, _ = torch.min(input_view, dim=1, keepdim=True)
+            input_view.sub_(input_min)
+            input_max, _ = torch.max(input_view, dim=1, keepdim=True)
+            input_view.div_(input_max)
+            input_view = input_view.view((input.shape[1], input.shape[2], input.shape[3]))
+
+            self.norm(input_view)
+            self.norm(target_view)
 
         input_content = self.content_layers.forward(input)
         target_content = self.content_layers.forward(target)

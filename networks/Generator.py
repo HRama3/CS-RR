@@ -10,14 +10,15 @@ class Generator(nn.Module):
     upscale_factor = 2
 
     def __init__(self, num_features: int, num_res_blocks: int, num_dense_layers: int, dense_bottleneck_size: int,
-                 instance_norm: bool = True):
+                 instance_norm: bool = True) -> None:
         """
 
-        :param num_features: int
-        :param num_res_blocks: int
-        :param num_dense_layers: int
-        :param dense_bottleneck_size: int
-        :param instance_norm: bool
+        :rtype: None
+        :param num_features: 
+        :param num_res_blocks: 
+        :param num_dense_layers: 
+        :param dense_bottleneck_size: 
+        :param instance_norm: 
         """
         super(Generator, self).__init__()
 
@@ -50,8 +51,8 @@ class Generator(nn.Module):
         self.subpixel_conv2 = SubPixelConv(num_features // (Generator.upscale_factor ** 2), 12,
                                            Generator.upscale_factor)
 
-        self.out_conv = nn.Conv2d(3, 3, kernel_size=Generator.kernel_size, bias=False, padding_mode='reflect')
-        self.out_activ = nn.Sigmoid()
+        self.out_conv = nn.Conv2d(3, 3, kernel_size=Generator.kernel_size, bias=False, padding_mode='reflect', padding=1)
+        self.out_activ = nn.ReLU(inplace=False)
 
     def forward(self, input: Tensor) -> Tensor:
         """

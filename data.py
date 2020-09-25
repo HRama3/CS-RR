@@ -1,3 +1,4 @@
+import argparse
 import os
 import os.path
 from PIL import Image, ImageOps
@@ -8,6 +9,7 @@ import torchvision.transforms.functional as F
 
 
 # Code adapted from https://github.com/pytorch/vision/blob/master/torchvision/datasets/folder.py
+
 
 EXTENSIONS = {'jpg', 'jpeg', 'png'}
 DATASET_PATH = 'datasets'
@@ -33,7 +35,7 @@ def get_centre_crop_box(width: int, height: int, target_width: int, target_heigh
     return left, top, right, bottom
 
 
-def pre_process(root: os.path, targets: os.path, samples: os.path, target_width: int, target_height: int) -> None:
+def preprocess(root: os.path, targets: os.path, samples: os.path, target_width: int, target_height: int) -> None:
     try:
         os.makedirs(str(targets))
         os.makedirs(str(samples))
@@ -46,7 +48,7 @@ def pre_process(root: os.path, targets: os.path, samples: os.path, target_width:
                 img = Image.open(f)
                 width, height = img.size
                 if height > width:
-                    img = img.rotate(90)
+                    img = img.transpose(Image.ROTATE_90)
                     width, height = img.size
 
                 if width >= target_width and height >= target_height:
@@ -71,7 +73,7 @@ def make_dataset(targets_path: os.path, samples_path: os.path) -> List[Tuple[Any
     return instances
 
 
-def tensor_loader(path: str, load_device: device) -> Tensor:
+def load_tensor(path: str, load_device: device) -> Tensor:
     with open(path, 'rb') as f:
         img = Image.open(f)
         img = img.convert('RGB')
@@ -82,11 +84,8 @@ def tensor_loader(path: str, load_device: device) -> Tensor:
 class SRDataset(VisionDataset):
     TARGET, SAMPLE = 0, 1
 
-    def __init__(self, root: str, target_width: int, target_height: int, load_device: device = device('cpu')) -> None:
+    def __init__(self, root: str, load_device: device = device('cpu')) -> None:
         super(SRDataset, self).__init__(root)
-
-        if (target_width % 4) or (target_height % 4):
-            raise ValueError('Target width or target height not divisible by upscaling factor, 4')
 
         root_path = os.path.join(DATASET_PATH, root)
 
@@ -97,18 +96,18 @@ class SRDataset(VisionDataset):
         samples_path = os.path.join(root_path, SAMPLES_PATH)
 
         if not (os.access(targets_path, os.R_OK) or os.access(samples_path, os.R_OK)):
-            pre_process(root_path, targets_path, samples_path, target_width, target_height)
+            raise FileNotFoundError('samples and targets not found in dataset folder, {:s}. Please run script data.py '
+                                    'to preprocess data'.format(root))
 
         self.load_device = load_device
 
         self.image_paths = make_dataset(targets_path, samples_path)
         if len(self.image_paths) == 0:
             msg = "Found 0 files in {}\n".format(self.root)
-            if EXTENSIONS is not None:
-                msg += "Supported extensions are: {}".format(",".join(EXTENSIONS))
+            msg += "Supported extensions are: {}".format(",".join(EXTENSIONS))
             raise RuntimeError(msg)
 
-        self.loader = tensor_loader
+        self.loader = load_tensor
 
     def __getitem__(self, index: int) -> Tuple[Tensor, Tensor]:
         path = self.image_paths[index]
@@ -119,3 +118,33 @@ class SRDataset(VisionDataset):
 
     def __len__(self) -> int:
         return len(self.image_paths)
+
+
+if __name__ == '__main__':
+    gen_params = {'num_features': 64, 'num_res_blocks': 8, 'num_dense_layers': 8, 'dense_bottleneck_size': 4}
+    discriminator_params = {}
+    loss_layers = {}
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, default='MSCOCO', help='Dataset folder is ./datasets to preprocess')
+    parser.add_argument('--width', type=int, default=512, help='Target width of downscaled images')
+    parser.add_argument('--height', type=int, default=384, help='Target height of downscaled images')
+
+    args = parser.parse_args()
+    dataset = args.data
+    width = args.width
+    height = args.height
+
+    root_path = os.path.join(DATASET_PATH, dataset)
+
+    if not os.access(root_path, os.R_OK):
+        raise FileNotFoundError('Dataset folder {:s} not found in ./{:s}'.format(dataset, DATASET_PATH))
+
+    targets_path = os.path.join(root_path, TARGETS_PATH)
+    samples_path = os.path.join(root_path, SAMPLES_PATH)
+
+    if (width % 4) or (height % 4):
+        raise ValueError('Target width or target height not divisible by upscaling factor, 4')
+
+    if not (os.access(targets_path, os.R_OK) or os.access(samples_path, os.R_OK)):
+        preprocess(root_path, targets_path, samples_path, width, height)

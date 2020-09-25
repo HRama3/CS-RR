@@ -40,7 +40,7 @@ class _DenseLayer(nn.Module):
         """
 
         if input.shape[1] != self.num_features:
-            raise ValueError('Incorrect dimensions')
+            raise ValueError('Incorrect channel dimensions')
 
         bottleneck_features = self.bottleneck_activ(
             self.bottleneck_norm(

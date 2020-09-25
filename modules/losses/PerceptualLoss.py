@@ -77,14 +77,8 @@ class PerceptualLoss(nn.Module):
                              .format(str(input.shape), str(target.shape)))
 
         for i in range(input.shape[0]):
-            input_view = input.select(dim=0, index=i).view(input.shape[1], -1)
+            input_view = input.select(dim=0, index=i)
             target_view = target.select(dim=0, index=i)
-
-            input_min, _ = torch.min(input_view, dim=1, keepdim=True)
-            input_view.sub_(input_min)
-            input_max, _ = torch.max(input_view, dim=1, keepdim=True)
-            input_view.div_(input_max)
-            input_view = input_view.view((input.shape[1], input.shape[2], input.shape[3]))
 
             self.norm(input_view)
             self.norm(target_view)

@@ -2,7 +2,6 @@ from os import path
 import requests
 import torch
 from torch import nn
-from torchvision import transforms
 from torchvision.models.inception import Inception3, model_urls
 from torch.tensor import Tensor
 

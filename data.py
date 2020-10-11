@@ -4,9 +4,8 @@ import os.path
 from PIL import Image, ImageOps
 from torch import device, Tensor
 from torchvision.datasets import VisionDataset
-from typing import List, Tuple, Any
 import torchvision.transforms.functional as F
-
+from typing import List, Tuple, Any
 
 # Code adapted from https://github.com/pytorch/vision/blob/master/torchvision/datasets/folder.py
 
@@ -26,15 +25,6 @@ def get_image_name(filename: str, suffix: str = None) -> str:
     return ''.join(tokens)
 
 
-def get_centre_crop_box(width: int, height: int, target_width: int, target_height: int) -> Tuple[int, int, int, int]:
-    left = (width - target_width) // 2
-    top = (height - target_height) // 2
-    right = (width + target_width) // 2
-    bottom = (height + target_height) // 2
-
-    return left, top, right, bottom
-
-
 def preprocess(root: os.path, targets: os.path, samples: os.path, target_width: int, target_height: int) -> None:
     try:
         os.makedirs(str(targets))
@@ -52,7 +42,7 @@ def preprocess(root: os.path, targets: os.path, samples: os.path, target_width: 
                     width, height = img.size
 
                 if width >= target_width and height >= target_height:
-                    target_image = img.crop(get_centre_crop_box(width, height, target_width, target_height))
+                    target_image = F.center_crop(img, (target_height, target_width))
                     sample_image = ImageOps.scale(target_image, factor=0.25)
 
                     target_image.save(os.path.join(targets, get_image_name(file.name)), format='png')
@@ -121,10 +111,6 @@ class SRDataset(VisionDataset):
 
 
 if __name__ == '__main__':
-    gen_params = {'num_features': 64, 'num_res_blocks': 8, 'num_dense_layers': 8, 'dense_bottleneck_size': 4}
-    discriminator_params = {}
-    loss_layers = {}
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', type=str, default='MSCOCO', help='Dataset folder in ./datasets to preprocess')
     parser.add_argument('--width', type=int, default=512, help='Target width of downscaled images')

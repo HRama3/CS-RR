@@ -10,7 +10,8 @@ class SubPixelConv(nn.Module):
         upscale_features = upscale_factor ** 2
         if num_output_features % upscale_features:
             raise ValueError(
-                'Number of convolution output features not a multiple of r^2 = {:d}'.format(upscale_factor ** 2))
+                'Number of convolution output features not a multiple of r^2 = {:d}'.format(upscale_factor ** 2)
+            )
 
         super(SubPixelConv, self).__init__()
 
@@ -25,19 +26,19 @@ class SubPixelConv(nn.Module):
                                          requires_grad=True)
 
         self.pad = nn.ReflectionPad2d(padding=SubPixelConv.kernel_size // 2)
-        self.pixel_shuff = nn.PixelShuffle(upscale_factor=upscale_factor)
-        self.activ = nn.ReLU(inplace=True)
+        self.pixel_shuff = nn.PixelShuffle(upscale_factor)
+        self.activ = nn.PReLU(num_parameters=num_output_features // (upscale_factor ** 2))
 
-    def forward(self, input: Tensor) -> Tensor:
-        if input.shape[1] != self.num_input_features:
+    def forward(self, _input: Tensor) -> Tensor:
+        if _input.shape[1] != self.num_input_features:
             raise ValueError('Incorrect number of feature maps - expected {:d} but received {:d}'.format(
-                self.num_input_features, input.shape[1]
+                self.num_input_features, _input.shape[1]
             ))
 
-        output: Tensor = self.activ(
-            self.pixel_shuff(
-                F.conv2d(self.pad(input), weight=self.conv_weights)
-            )
+        upscale = self.pixel_shuff(
+            F.conv2d(self.pad(_input), weight=self.conv_weights)
         )
+
+        output: Tensor = self.activ(upscale)
 
         return output

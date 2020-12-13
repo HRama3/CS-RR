@@ -1,1 +1,1 @@
-__all__ = ['blocks', 'layers', 'losses']
+__all__ = ['blocks', 'inception', 'layers', 'losses']

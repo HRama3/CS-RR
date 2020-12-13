@@ -4,11 +4,12 @@ from scipy import linalg
 from skimage import metrics
 import torch
 from torch import Tensor
+from torchvision import transforms
 
-__all__ = ['norm', 'to_numpy_uint8_img', 'peak_signal_to_noise', 'struct_similarity', 'FrechetInception']
+__all__ = ['norm_inplace', 'to_numpy_uint8_img', 'peak_signal_to_noise', 'struct_similarity', 'FrechetInception']
 
 
-def norm(images: Tensor) -> None:
+def norm_inplace(images: Tensor) -> None:
     """
     Normalise images of batch, tensor to [0, 1]
     :param images: Tensor
@@ -25,8 +26,13 @@ def norm(images: Tensor) -> None:
 
 
 def to_numpy_uint8_img(images: Tensor) -> np.ndarray:
+    """
+
+    :param images:
+    :return:
+    """
     with torch.no_grad():
-        norm(images)
+        norm_inplace(images)
         images = torch.mul(images, 255.0)
 
         images = images.to(dtype=torch.uint8, device='cpu')
@@ -36,6 +42,12 @@ def to_numpy_uint8_img(images: Tensor) -> np.ndarray:
 
 
 def peak_signal_to_noise(sr_images: Tensor, target_images: Tensor) -> Tensor:
+    """
+
+    :param sr_images:
+    :param target_images:
+    :return:
+    """
     sr_images = to_numpy_uint8_img(sr_images)
     target_images = to_numpy_uint8_img(target_images)
     psnr = torch.empty(sr_images.shape[0], device='cpu')
@@ -46,6 +58,12 @@ def peak_signal_to_noise(sr_images: Tensor, target_images: Tensor) -> Tensor:
 
 
 def struct_similarity(sr_images: Tensor, target_images: Tensor) -> Tensor:
+    """
+
+    :param sr_images:
+    :param target_images:
+    :return:
+    """
     sr_images = to_numpy_uint8_img(sr_images)
     target_images = to_numpy_uint8_img(target_images)
     ssim = torch.empty(sr_images.shape[0], device='cpu')
@@ -57,12 +75,34 @@ def struct_similarity(sr_images: Tensor, target_images: Tensor) -> Tensor:
 
 class FrechetInception:
     def __init__(self, device: torch.device = torch.device('cpu')) -> None:
+        """
+
+        :param device:
+        """
         self.inception = InceptionCoding().to(device)
         self.fake_codes = torch.tensor([], device='cpu')
         self.real_codes = torch.tensor([], device='cpu')
 
+        self.norm = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], inplace=False)
+
     def add_codes(self, fake_images: Tensor, real_images: Tensor) -> None:
+        """
+
+        :param fake_images: Tensor
+        :param real_images: Tensor
+        """
+
+        assert fake_images.shape == real_images.shape
+
         with torch.no_grad():
+            fakes_normed = []
+            reals_normed = []
+            for idx in range(fake_images.shape[0]):
+                fakes_normed.append(torch.unsqueeze(self.norm(fake_images[idx, :, :, :]), dim=0))
+                reals_normed.append(torch.unsqueeze(self.norm(real_images[idx, :, :, :]), dim=0))
+            fake_images = torch.cat(fakes_normed, dim=0)
+            real_images = torch.cat(reals_normed, dim=0)
+
             _fake_codes = self.inception.forward(fake_images)
             _real_codes = self.inception.forward(real_images)
 
@@ -70,6 +110,10 @@ class FrechetInception:
             self.real_codes = torch.cat((self.real_codes, _real_codes.to(device='cpu')))
 
     def compute_distance(self) -> float:
+        """
+
+        :return: FID: float
+        """
         fake_codes_np = self.fake_codes.numpy()
         real_codes_np = self.real_codes.numpy()
 
@@ -87,6 +131,9 @@ class FrechetInception:
 
         return fid.item()
 
-    def clear(self) -> None:
+    def clear_codes(self) -> None:
+        """
+
+        """
         self.fake_codes = torch.tensor([], device='cpu')
         self.real_codes = torch.tensor([], device='cpu')

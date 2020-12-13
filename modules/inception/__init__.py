@@ -1,1 +1,1 @@
-__all__ = ['Inception.py']
+__all__ = ['Inception']
